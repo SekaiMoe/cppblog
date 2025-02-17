@@ -93,8 +93,8 @@ target_link_libraries(cppblog
 set(CMAKE_BUILD_TYPE Release)
 add_compile_options(-D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_REENTRANT)
 add_custom_command(
-     TARGET helper
+     TARGET blogcpp
      POST_BUILD
-     COMMAND strip helper
+     COMMAND strip blogcpp
      VERBATIM
 )
