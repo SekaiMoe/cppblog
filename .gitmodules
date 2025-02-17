@@ -1,0 +1,9 @@
+[submodule "include/cmark"]
+	path = include/cmark
+	url = https://github.com/github/cmark-gfm.git
+[submodule "include/cpptoml"]
+	path = include/cpptoml
+	url = https://github.com/skystrife/cpptoml.git
+[submodule "include/crow"]
+	path = include/crow
+	url = https://github.com/CrowCpp/Crow.git

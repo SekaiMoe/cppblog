@@ -1,0 +1,11 @@
+# Blog basic configuration
+blog_name = "My Blog"
+blog_description = "A simple markdown blog"
+posts_directory = "posts"
+
+# Ports
+port = 5444
+
+# Hot reload configuration(seconds)
+hot_reload = true
+reload_interval = 5 
