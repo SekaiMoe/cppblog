@@ -5,8 +5,8 @@ A simple pure backend blog renderer written in C++
 - Single executable file
 - No runtime overhead
 - Low memory overhead (minimum 4.5MB running with -O3 optimization)
-- No embedded js and css
-- Full logging support
+- Minimal embedded CSS for styling
+- Full logging support by crow
 - Hot reload support
 - Pure backend rendering
 ## Build
