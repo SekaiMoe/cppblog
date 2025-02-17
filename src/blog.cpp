@@ -13,7 +13,8 @@
 #include <algorithm>
 #include <iomanip>
 #include <limits>
-#include <ctime>
+#include <vector>
+#include <algorithm>
 
 #include "blog.h"
 
@@ -79,6 +80,13 @@ const char* HTML_TEMPLATE = R"(
         body { max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6; }
         pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
         img { max-width: 100%; }
+        .search-form { margin-bottom: 20px; }
+        .search-input { width: 70%%; padding: 8px; }
+        .search-button { padding: 8px 16px; }
+        .search-results { margin-top: 20px; }
+        .search-result { margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; }
+        .search-result h3 { margin-top: 0; }
+        .search-result-excerpt { color: #666; }
         .post-list { list-style: none; padding: 0; }
         .post-item { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
         .post-meta { color: #666; font-size: 0.9em; }
@@ -92,12 +100,30 @@ const char* HTML_TEMPLATE = R"(
         <div class="rss-link">
             <a href="/feed.xml">RSS订阅</a>
         </div>
+        <form class="search-form" action="/search" method="get">
+            <input type="text" name="q" class="search-input" placeholder="搜索博客...">
+            <button type="submit" class="search-button">搜索</button>
+        </form>
     </header>
     <main>
         %s
     </main>
 </body>
 </html>
+)";
+
+const char* SEARCH_RESULT_TEMPLATE = R"(
+<div class="search-results">
+    <h2>搜索结果: %s</h2>
+    %s
+</div>
+)";
+
+const char* SEARCH_RESULT_ITEM_TEMPLATE = R"(
+<div class="search-result">
+    <h3><a href="%s">%s</a></h3>
+    <div class="search-result-excerpt">%s</div>
+</div>
 )";
 
 std::string format_time(const std::chrono::system_clock::time_point& time) {

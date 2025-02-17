@@ -15,6 +15,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE FALSE)
 
+# Ensure that CMAKE_BUILD_TYPE has a value specified for single configuration generators.
+if(NOT DEFINED CMAKE_BUILD_TYPE AND NOT DEFINED CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING
+        "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel Coverage.")
+endif()
+
+include(GNUInstallDirs)
+
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
