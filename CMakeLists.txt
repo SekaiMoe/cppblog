@@ -24,6 +24,9 @@ else()
     message(STATUS "Ccache not found. Compiling with cache will be disabled.")
 endif(CCACHE_FOUND)
 
+add_compile_options("-fstack-clash-protection")
+add_compile_options("-fstack-protector-all")
+
 find_package(Git QUIET)
 if(GIT_FOUND)
     if(NOT EXISTS "${PROJECT_SOURCE_DIR}/include/crow/CMakeLists.txt" OR
@@ -77,4 +80,13 @@ target_link_libraries(cppblog
     OpenSSL::SSL
     OpenSSL::Crypto
     ZLIB::ZLIB
+)
+
+set(CMAKE_BUILD_TYPE Release)
+add_compile_options(-D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_REENTRANT)
+add_custom_command(
+     TARGET helper
+     POST_BUILD
+     COMMAND strip helper
+     VERBATIM
 )

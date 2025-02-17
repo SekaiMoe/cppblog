@@ -8,4 +8,4 @@ port = 5444
 
 # Hot reload configuration(seconds)
 hot_reload = true
-reload_interval = 5 
+reload_interval = 1

@@ -1,5 +1,3 @@
-#include "blog.h"
-
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -17,6 +15,8 @@
 #include <limits>
 #include <ctime>
 
+#include "blog.h"
+
 namespace fs = std::filesystem;
 
 struct BlogPost {
@@ -26,11 +26,14 @@ struct BlogPost {
     std::string url;
     std::chrono::system_clock::time_point created_time;
     std::string author;
+    std::string full_html;
+    std::vector<std::string> tags;
 };
 
 struct BlogConfig {
     std::string blog_name;
     std::string blog_description;
+    std::string blog_author;
     std::string posts_directory;
     int port;
     bool hot_reload;
@@ -219,6 +222,30 @@ std::string generate_rss_feed() {
     return std::string(feed);
 }
 
+std::string strip_front_matter(const std::string& content) {
+    std::istringstream stream(content);
+    std::string line;
+    bool in_front_matter = false;
+    std::string result;
+
+    if (std::getline(stream, line) && line == "---") {
+        in_front_matter = true;
+        while (std::getline(stream, line)) {
+            if (line == "---") {
+                in_front_matter = false;
+                continue;
+            }
+            if (!in_front_matter) {
+                result += line + "\n";
+            }
+        }
+    } else {
+        result = content;
+    }
+
+    return result;
+}
+
 void update_cache() {
     std::unordered_map<std::string, BlogPost> new_cache;
 
@@ -230,11 +257,58 @@ void update_cache() {
 
             BlogPost post;
             post.content = read_file(entry.path());
-            post.title = extract_title(post.content);
-            post.html = convert_md_to_html(post.content);
+
+            std::istringstream stream(post.content);
+            std::string line;
+            bool in_front_matter = false;
+
+            if (std::getline(stream, line) && line == "---") {
+                in_front_matter = true;
+                while (std::getline(stream, line) && line != "---") {
+                    size_t pos = line.find(':');
+                    if (pos != std::string::npos) {
+                        std::string key = line.substr(0, pos);
+                        std::string value = line.substr(pos + 1);
+                        value.erase(0, value.find_first_not_of(" "));
+                        value.erase(value.find_last_not_of(" ") + 1);
+
+                        if (key == "title") {
+                            post.title = value;
+                        } else if (key == "date") {
+                            std::tm tm = {};
+                            std::istringstream ss(value);
+                            ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
+                            post.created_time = std::chrono::system_clock::from_time_t(std::mktime(&tm));
+                        } else if (key == "author") {
+                            post.author = value;
+                        } else if (key == "tags") {
+                            std::istringstream tags_stream(value);
+                            std::string tag;
+                            while (std::getline(tags_stream, tag, ',')) {
+                                tag.erase(0, tag.find_first_not_of(" "));
+                                tag.erase(tag.find_last_not_of(" ") + 1);
+                                post.tags.push_back(tag);
+                            }
+                        }
+                    }
+                }
+            }
+
+            std::string content_without_front_matter = strip_front_matter(post.content);
+            post.html = convert_md_to_html(content_without_front_matter);
             post.url = url_path;
-            post.created_time = std::chrono::system_clock::now();
-            post.author = "SekaiMoe";
+
+            if (post.title.empty()) {
+                post.title = extract_title(content_without_front_matter);
+            }
+
+            if (post.author.empty()) {
+                post.author = config.blog_author;
+            }
+
+            if (post.created_time.time_since_epoch().count() == 0) {
+                post.created_time = std::chrono::system_clock::now();
+            }
 
             char page[16384];
             snprintf(page, sizeof(page), HTML_TEMPLATE,
@@ -242,6 +316,7 @@ void update_cache() {
                     config.blog_name.c_str(), config.blog_description.c_str(),
                     post.html.c_str());
 
+            post.html = page;
             new_cache[url_path] = std::move(post);
         }
     }
@@ -254,7 +329,8 @@ void load_config() {
     try {
         auto config_toml = cpptoml::parse_file("config.toml");
         config.blog_name = config_toml->get_as<std::string>("blog_name").value_or("My Blog");
-        config.blog_description = config_toml->get_as<std::string>("blog_description").value_or("A simple blog");
+        config.blog_description = config_toml->get_as<std::string>("blog_author").value_or("SekaiMoe");
+        config.blog_author = config_toml->get_as<std::string>("blog_description").value_or("A simple blog");
         config.posts_directory = config_toml->get_as<std::string>("posts_directory").value_or("posts");
         config.port = config_toml->get_as<int>("port").value_or(5444);
         config.hot_reload = config_toml->get_as<bool>("hot_reload").value_or(true);
