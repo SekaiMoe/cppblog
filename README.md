@@ -1,2 +1,24 @@
 # cppblog
 A simple pure backend blog renderer written in C++
+
+## Features
+- Single executable file
+- No runtime overhead
+- Low memory overhead (minimum 4.5MB with -O3 optimization)
+- No embedded js and css
+- Full logging support
+## Build
+Requires:
+- git
+- cmake 3.10 or later
+
+run command to build it:
+```bash
+$ mkdir build
+$ cdbuild
+$ cmake .. -GNinja
+$ ninja install
+```
+
+## Third party libraries
+see include folder for more details

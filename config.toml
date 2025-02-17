@@ -2,6 +2,7 @@
 blog_name = "My Blog"
 blog_description = "A simple markdown blog"
 posts_directory = "posts"
+blog_author = "SekaiMoe"
 
 # Ports
 port = 5444
