@@ -11,7 +11,6 @@
 #include <algorithm>
 #include <iomanip>
 #include <limits>
-#include <vector>
 
 #include "blog.h"
 
