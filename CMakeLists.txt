@@ -55,12 +55,15 @@ set(CMARK_TESTS OFF CACHE BOOL "Build cmark-gfm tests")
 set(CMARK_SHARED OFF CACHE BOOL "Build shared libraries")
 set(CMARK_STATIC ON CACHE BOOL "Build static libraries")
 set(CMARK_SAMPLES OFF CACHE BOOL "Build sample programs")
+set(CMARK_GFM_EXTENSIONS ON CACHE BOOL "Build GFM extensions")
+
 add_subdirectory(include/cmark build/cmark)
 
 include_directories(
     ${CMAKE_BINARY_DIR}/build/cmark/src
     ${PROJECT_SOURCE_DIR}/include/cmark/src
     ${PROJECT_SOURCE_DIR}/include/crow/include
+    ${PROJECT_SOURCE_DIR}/include/cmark/extensions
     ${PROJECT_SOURCE_DIR}/include/asio/asio/include
     ${PROJECT_SOURCE_DIR}/include/cpptoml/include
     ${PROJECT_SOURCE_DIR}
@@ -84,6 +87,7 @@ target_include_directories(cppblog PRIVATE
 target_link_libraries(cppblog
     PRIVATE
     libcmark-gfm_static
+    libcmark-gfm-extensions_static
     Threads::Threads
     OpenSSL::SSL
     OpenSSL::Crypto

@@ -170,10 +170,19 @@ std::string extract_title(const std::string& content) {
 }
 
 std::string convert_md_to_html(const std::string& markdown) {
-    cmark_parser *parser = cmark_parser_new(CMARK_OPT_DEFAULT);
+    cmark_gfm_core_extensions_ensure_registered();
+    int options = CMARK_OPT_DEFAULT | 
+                  CMARK_OPT_UNSAFE |         // 启用 HTML 标签支持
+                  CMARK_OPT_VALIDATE_UTF8;   // UTF8 验证
+    cmark_parser *parser = cmark_parser_new(options);    
+    cmark_parser_attach_syntax_extension(parser, cmark_find_syntax_extension("table"));
+    cmark_parser_attach_syntax_extension(parser, cmark_find_syntax_extension("strikethrough"));
+    cmark_parser_attach_syntax_extension(parser, cmark_find_syntax_extension("tasklist"));
+    cmark_parser_attach_syntax_extension(parser, cmark_find_syntax_extension("autolink"));
     cmark_parser_feed(parser, markdown.c_str(), markdown.length());
     cmark_node *doc = cmark_parser_finish(parser);
-    char *html = cmark_render_html(doc, CMARK_OPT_DEFAULT, nullptr);
+    char *html = cmark_render_html(doc, options, 
+                                 cmark_parser_get_syntax_extensions(parser));
     std::string result(html);
     free(html);
     cmark_node_free(doc);
@@ -357,18 +366,12 @@ void update_cache() {
 }
 
 static void write_log(const char* msg) {
-        // 打开日志文件
         std::ofstream logfile("./program_crash.log", std::ios::app);
         if (logfile.is_open()) {
-            // 获取当前时间戳
             std::time_t t = std::time(nullptr);
             char timestamp[100];
             std::strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", std::localtime(&t));
-
-            // 写入日志信息
             logfile << "[" << timestamp << "] " << msg << std::endl;
-
-            // 关闭日志文件
             logfile.close();
         }
 }
@@ -379,15 +382,11 @@ static void sighandle(int sig){
         char buf[1024];
         ssize_t bufsize __attribute__((unused)) = read(clifd, buf, sizeof(buf));
         close(clifd);
-
-        // 记录崩溃日志
         std::string errorMsg = "Fatal error (" + std::to_string(sig) + "), the program has been stopped.";
         LOG_ERROR();
         std::cerr << errorMsg << std::endl;
         write_log(errorMsg.c_str());
         std::cout << "Log file path: " << std::filesystem::current_path() << "./program_crash.log" << std::endl;
-
-        // 获取调用栈
         #ifdef __GLIBC__
         void *array[10];
         int size = backtrace(array, 10);  // 将 size 的类型改为 int
@@ -448,6 +447,7 @@ int main() {
     #ifdef __linux__
     register_signal();
     #endif
+    cmark_gfm_core_extensions_ensure_registered();
     load_config();
     update_cache();
 
