@@ -17,5 +17,4 @@
 #endif
 #include <ctime> // For timestamp
 
-#define LOG_ERROR() logError(__func__, __FILE__, __LINE__)
-
+#endif

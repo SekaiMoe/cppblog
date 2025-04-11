@@ -15,6 +15,14 @@
 
 #include "blog.h"
 
+void logError(const std::string& func, const std::string& file, int line) {
+    const std::string RED = "\033[31m";
+    const std::string RESET = "\033[0m";
+    std::cerr << RED << "In " << func << "() in " << file << " line " << line << ":" << RESET << std::endl;
+}
+
+#define LOG_ERROR() logError(__func__, __FILE__, __LINE__)
+
 namespace fs = std::filesystem;
 
 struct BlogPost {
