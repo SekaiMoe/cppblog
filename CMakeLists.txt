@@ -88,8 +88,8 @@ add_dependencies(libcmark-gfm_static libcmark-gfm-extensions_static)
 
 target_link_libraries(cppblog
     PRIVATE
-    libcmark-gfm_static
     libcmark-gfm-extensions_static
+    libcmark-gfm_static
     Threads::Threads
     OpenSSL::SSL
     OpenSSL::Crypto
