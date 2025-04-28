@@ -84,6 +84,8 @@ target_include_directories(cppblog PRIVATE
     ${PROJECT_SOURCE_DIR}/include/cmark/extensions
 )
 
+add_dependencies(libcmark-gfm_static libcmark-gfm-extensions_static)
+
 target_link_libraries(cppblog
     PRIVATE
     libcmark-gfm_static
