@@ -8,6 +8,7 @@
 #include <memory>
 #include <regex>
 #include <vector>
+#include <atomic>
 #include <algorithm>
 #include <iomanip>
 #include <limits>
@@ -48,7 +49,7 @@ struct BlogConfig {
 BlogConfig config;
 std::unordered_map<std::string, BlogPost> posts_cache;
 std::mutex cache_mutex;
-bool should_run = true;
+std::atomic<bool> should_run{true};
 
 const char* RSS_TEMPLATE = R"(<?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0">
@@ -129,6 +130,22 @@ const char* SEARCH_RESULT_ITEM_TEMPLATE = R"(
     <div class="search-result-excerpt">%s</div>
 </div>
 )";
+
+std::string html_escape(const std::string& s) {
+    std::string r;
+    r.reserve(s.size());
+    for (char c : s) {
+        switch (c) {
+            case '&': r += "&amp;"; break;
+            case '<': r += "<"; break;
+            case '>': r += ">"; break;
+            case '"': r += "&quot;"; break;
+            case '\'': r += "&#39;"; break;
+            default: r += c;
+        }
+    }
+    return r;
+}
 
 std::string format_time(const std::chrono::system_clock::time_point& time) {
     auto tt = std::chrono::system_clock::to_time_t(time);
