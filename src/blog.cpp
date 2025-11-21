@@ -392,6 +392,19 @@ static void sighandle(int sig) {
     _exit(127);
 }
 
+void register_signal(void){
+    signal(SIGABRT, sighandle);
+    signal(SIGBUS, sighandle);
+    signal(SIGFPE, sighandle);
+    signal(SIGILL, sighandle);
+    signal(SIGQUIT, sighandle);
+    signal(SIGSEGV, sighandle);  // 段错误处理
+    signal(SIGSYS, sighandle);
+    signal(SIGTRAP, sighandle);
+    signal(SIGXCPU, sighandle);
+    signal(SIGXFSZ, sighandle);
+}
+
 void load_config() {
     try {
         auto config_toml = cpptoml::parse_file("config.toml");
