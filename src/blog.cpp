@@ -349,13 +349,7 @@ void update_cache() {
                 post.created_time = std::chrono::system_clock::now();
             }
 
-            char page[16384];
-            snprintf(page, sizeof(page), HTML_TEMPLATE,
-                    post.title.c_str(), config.blog_name.c_str(),
-                    config.blog_name.c_str(), config.blog_description.c_str(),
-                    post.html.c_str());
-
-            post.html = page;
+            post.html = convert_md_to_html(content_without_front_matter);
             new_cache[url_path] = std::move(post);
         }
     }
@@ -423,8 +417,8 @@ void load_config() {
     try {
         auto config_toml = cpptoml::parse_file("config.toml");
         config.blog_name = config_toml->get_as<std::string>("blog_name").value_or("My Blog");
-        config.blog_description = config_toml->get_as<std::string>("blog_author").value_or("SekaiMoe");
-        config.blog_author = config_toml->get_as<std::string>("blog_description").value_or("A simple blog");
+        config.blog_description = config_toml->get_as<std::string>("blog_description").value_or("SekaiMoe");
+        config.blog_author = config_toml->get_as<std::string>("blog_author").value_or("A simple blog");
         config.posts_directory = config_toml->get_as<std::string>("posts_directory").value_or("posts");
         config.port = config_toml->get_as<int>("port").value_or(5444);
         config.hot_reload = config_toml->get_as<bool>("hot_reload").value_or(true);
