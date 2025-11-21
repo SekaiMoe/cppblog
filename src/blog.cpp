@@ -386,48 +386,10 @@ static void write_log(const char* msg) {
         }
 }
 
-static void sighandle(int sig){
-        signal(sig, SIG_DFL);  // 恢复默认信号处理
-        int clifd = open("/proc/self/cmdline", O_RDONLY | O_CLOEXEC);
-        char buf[1024];
-        ssize_t bufsize __attribute__((unused)) = read(clifd, buf, sizeof(buf));
-        close(clifd);
-        std::string errorMsg = "Fatal error (" + std::to_string(sig) + "), the program has been stopped.";
-        LOG_ERROR();
-        std::cerr << errorMsg << std::endl;
-        write_log(errorMsg.c_str());
-        std::cout << "Log file path: " << std::filesystem::current_path() << "./program_crash.log" << std::endl;
-        #ifdef __GLIBC__
-        void *array[10];
-        int size = backtrace(array, 10);  // 将 size 的类型改为 int
-        char **stackTrace = backtrace_symbols(array, size);
-
-        if (stackTrace) {
-            std::cout << "Stack trace:" << std::endl;
-            write_log("Stack trace:");
-            for (int i = 0; i < size; i++) {  // 使用 int 类型
-                std::cout << stackTrace[i] << std::endl;
-                write_log(stackTrace[i]);
-            }
-            free(stackTrace);
-        }
-        #else
-        write_log("Stack trace not available.");
-        #endif
-        exit(127);
-}
-
-void register_signal(void){
-    signal(SIGABRT, sighandle);
-    signal(SIGBUS, sighandle);
-    signal(SIGFPE, sighandle);
-    signal(SIGILL, sighandle);
-    signal(SIGQUIT, sighandle);
-    signal(SIGSEGV, sighandle);  // 段错误处理
-    signal(SIGSYS, sighandle);
-    signal(SIGTRAP, sighandle);
-    signal(SIGXCPU, sighandle);
-    signal(SIGXFSZ, sighandle);
+static void sighandle(int sig) {
+    const char msg[] = "Fatal error: signal received. Exiting.\n";
+    write(STDERR_FILENO, msg, sizeof(msg) - 1);
+    _exit(127);
 }
 
 void load_config() {
