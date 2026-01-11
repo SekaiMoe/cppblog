@@ -1,6 +1,5 @@
 #include <filesystem>
 #include <string>
-#include <unordered_map>
 #include <mutex>
 #include <chrono>
 #include <thread>
@@ -11,6 +10,8 @@
 #include <algorithm>
 #include <iomanip>
 #include <limits>
+#include <unordered_set>
+#include <unordered_map>
 
 #include "blog.h"
 
@@ -47,6 +48,7 @@ BlogConfig config;
 std::unordered_map<std::string, BlogPost> posts_cache;
 std::mutex cache_mutex;
 std::atomic<bool> should_run{true};
+std::unordered_map<std::string, fs::file_time_type> file_mod_times;
 
 const char* RSS_TEMPLATE = R"(<?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0">
@@ -331,14 +333,35 @@ std::string strip_front_matter(const std::string& content) {
 }
 
 void update_cache() {
-    std::unordered_map<std::string, BlogPost> new_cache;
+    std::unordered_set<std::string> seen_files;
 
-    for(const auto& entry : fs::recursive_directory_iterator(config.posts_directory)) {
-        if (entry.is_regular_file() && entry.path().extension() == ".md") {
-            auto rel_path = fs::relative(entry.path(), config.posts_directory);
-            std::string url_path = "/" + rel_path.string();
-            url_path = std::regex_replace(url_path, std::regex("\\.md$"), ".html");
+    for (const auto& entry : fs::recursive_directory_iterator(config.posts_directory)) {
+        if (!entry.is_regular_file() || entry.path().extension() != ".md") {
+            continue;
+        }
 
+        auto rel_path = fs::relative(entry.path(), config.posts_directory);
+        std::string url_path = "/" + rel_path.string();
+        url_path = std::regex_replace(url_path, std::regex("\\.md$"), ".html");
+
+        seen_files.insert(url_path);
+
+        auto current_mtime = fs::last_write_time(entry.path());
+
+        bool needs_update = false;
+        {
+            std::lock_guard<std::mutex> lock(cache_mutex);
+            auto time_it = file_mod_times.find(url_path);
+            if (time_it == file_mod_times.end()) {
+                // 文件是新增的
+                needs_update = true;
+            } else if (current_mtime > time_it->second) {
+                // 文件已被修改
+                needs_update = true;
+            }
+        }
+
+        if (needs_update) {
             BlogPost post;
             post.content = read_file(entry.path());
 
@@ -379,27 +402,38 @@ void update_cache() {
             }
 
             std::string content_without_front_matter = strip_front_matter(post.content);
+            post.html = convert_md_to_html(content_without_front_matter);
             post.url = url_path;
 
             if (post.title.empty()) {
                 post.title = extract_title(content_without_front_matter);
             }
-
             if (post.author.empty()) {
                 post.author = config.blog_author;
             }
-
             if (post.created_time.time_since_epoch().count() == 0) {
                 post.created_time = std::chrono::system_clock::now();
             }
 
-            post.html = convert_md_to_html(content_without_front_matter);
-            new_cache[url_path] = std::move(post);
+            {
+                std::lock_guard<std::mutex> lock(cache_mutex);
+                posts_cache[url_path] = std::move(post);
+                file_mod_times[url_path] = current_mtime;
+            }
         }
     }
 
-    std::lock_guard<std::mutex> lock(cache_mutex);
-    posts_cache = std::move(new_cache);
+    {
+        std::lock_guard<std::mutex> lock(cache_mutex);
+        for (auto it = posts_cache.begin(); it != posts_cache.end();) {
+            if (seen_files.find(it->first) == seen_files.end()) {
+                file_mod_times.erase(it->first);
+                it = posts_cache.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
 }
 
 static void write_log(const char* msg) {
@@ -458,6 +492,13 @@ int main() {
     #endif
     cmark_gfm_core_extensions_ensure_registered();
     load_config();
+
+    {
+        std::lock_guard<std::mutex> lock(cache_mutex);
+        posts_cache.clear();
+        file_mod_times.clear();
+    }
+
     update_cache();
 
     std::thread reload_thread;
@@ -481,6 +522,21 @@ int main() {
 
     CROW_ROUTE(app, "/<path>")
     ([](const std::string& path) {
+        if (path.empty()) {
+            return crow::response(400); // Bad Request
+        }
+
+        fs::path user_path(path);
+        fs::path normalized = user_path.lexically_normal();
+
+        if (path.find("..") != std::string::npos) {
+            return crow::response(400);
+        }
+
+        if (user_path.extension() != ".html") {
+            return crow::response(400);
+        }
+
         std::string url_path = "/" + path;
         std::lock_guard<std::mutex> lock(cache_mutex);
         auto it = posts_cache.find(url_path);
@@ -495,6 +551,96 @@ int main() {
             return crow::response(full_html);
         }
         return crow::response(404);
+    });
+
+
+    // 添加搜索路由
+    CROW_ROUTE(app, "/search")
+    ([](const crow::request& req, crow::response& res) {
+        auto q_param = req.url_params.get("q");
+        if (!q_param) {
+            res.set_header("Location", "/");
+            res.code = 302;
+            res.end();
+            return;
+        }
+        std::string query = std::string(q_param);
+
+        std::vector<const BlogPost*> matches;
+        {
+            std::lock_guard<std::mutex> lock(cache_mutex);
+            for (const auto& [url, post] : posts_cache) {
+                if (post.title.find(query) != std::string::npos ||
+                    post.content.find(query) != std::string::npos) {
+                    matches.push_back(&post);
+                }
+            }
+        }
+
+        std::ostringstream results_html;
+        if (matches.empty()) {
+            results_html << "<p>没有找到与 \"" << html_escape(query) << "\" 相关的内容。</p>";
+        } else {
+            for (const auto* post : matches) {
+                std::string excerpt = post->content.substr(0, 100);
+                if (post->content.length() > 100) excerpt += "...";
+
+                results_html << "<div class='search-result'>";
+                results_html << "<h3><a href='" << html_escape(post->url) << "'>" 
+                             << html_escape(post->title) << "</a></h3>";
+                results_html << "<div class='search-result-excerpt'>" 
+                             << html_escape(excerpt) << "</div>";
+                results_html << "</div>";
+            }
+        }
+
+        std::ostringstream full_page;
+        full_page << "<!DOCTYPE html>\n<html>\n<head>\n"
+                  << "    <meta charset=\"UTF-8\">\n"
+                  << "    <title>搜索 \"" << html_escape(query) << "\" - " << html_escape(config.blog_name) << "</title>\n"
+                  << "    <link rel=\"alternate\" type=\"application/rss+xml\" title=\"RSS Feed\" href=\"/feed.xml\" />\n"
+                  << R"(<style>
+        body { max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+        img { max-width: 100%; }
+        .search-form { margin-bottom: 20px; }
+        .search-input { width: 70%; padding: 8px; }
+        .search-button { padding: 8px 16px; }
+        .search-results { margin-top: 20px; }
+        .search-result { margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; }
+        .search-result h3 { margin-top: 0; }
+        .search-result-excerpt { color: #666; }
+        .post-list { list-style: none; padding: 0; }
+        .post-item { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+        .post-meta { color: #666; font-size: 0.9em; }
+        .rss-link { float: right; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><a href="/" style="text-decoration: none; color: inherit;">)" 
+                  << html_escape(config.blog_name) << R"(</a></h1>
+        <p>)" << html_escape(config.blog_description) << R"(</p>
+        <div class="rss-link">
+            <a href="/feed.xml">RSS订阅</a>
+        </div>
+        <form class="search-form" action="/search" method="get">
+            <input type="text" name="q" class="search-input" value=")" 
+                  << html_escape(query) << R"(" placeholder="搜索博客...">
+            <button type="submit" class="search-button">搜索</button>
+        </form>
+    </header>
+    <main>
+        <h2>搜索结果: ")" << html_escape(query) << R"("</h2>
+)" << results_html.str() << R"(
+    </main>
+</body>
+</html>)";
+
+        // 5. 设置响应并结束
+        res.set_header("Content-Type", "text/html; charset=utf-8");
+        res.write(full_page.str());
+        res.end();
     });
 
     app.port(config.port).run();
