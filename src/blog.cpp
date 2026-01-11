@@ -379,7 +379,6 @@ void update_cache() {
             }
 
             std::string content_without_front_matter = strip_front_matter(post.content);
-            post.html = convert_md_to_html(content_without_front_matter);
             post.url = url_path;
 
             if (post.title.empty()) {
