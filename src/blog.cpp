@@ -214,6 +214,27 @@ std::string convert_md_to_html(const std::string& markdown) {
     return result;
 }
 
+std::string string_format(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+
+    int size = vsnprintf(nullptr, 0, format, args);
+    va_end(args);
+
+    if (size <= 0) {
+        return std::string();
+    }
+
+    std::string result;
+    result.resize(size);
+
+    va_start(args, format);
+    vsnprintf(result.data(), size + 1, format, args);
+    va_end(args);
+
+    return result;
+}
+
 std::string generate_index_page() {
     std::vector<BlogPost> sorted_posts;
     {
@@ -238,14 +259,13 @@ std::string generate_index_page() {
         content << "</li>";
     }
     content << "</ul>";
-
-    char page[16384];
-    snprintf(page, sizeof(page), HTML_TEMPLATE,
-            config.blog_name.c_str(), config.blog_name.c_str(),
-            config.blog_name.c_str(), config.blog_description.c_str(),
-            content.str().c_str());
-
-    return std::string(page);
+    return string_format(HTML_TEMPLATE,
+        config.blog_name.c_str(),
+        config.blog_name.c_str(),
+        config.blog_name.c_str(),
+        config.blog_description.c_str(),
+        content.str().c_str()
+    );
 }
 
 std::string generate_rss_feed() {
@@ -466,12 +486,14 @@ int main() {
         std::lock_guard<std::mutex> lock(cache_mutex);
         auto it = posts_cache.find(url_path);
         if (it != posts_cache.end()) {
-            char page[16384];
-            snprintf(page, sizeof(page), HTML_TEMPLATE,
-                    it->second.title.c_str(), config.blog_name.c_str(),
-                    config.blog_name.c_str(), config.blog_description.c_str(),
-                    it->second.html.c_str());
-            return crow::response(page);
+            std::string full_html = string_format(HTML_TEMPLATE,
+                html_escape(it->second.title).c_str(),
+                html_escape(config.blog_name).c_str(),
+                html_escape(config.blog_name).c_str(),
+                html_escape(config.blog_description).c_str(),
+                it->second.html.c_str()
+            );
+            return crow::response(full_html);
         }
         return crow::response(404);
     });

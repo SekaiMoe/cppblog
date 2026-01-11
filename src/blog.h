@@ -6,6 +6,7 @@
 #include "../include/cpptoml/include/cpptoml.h"
 
 #include <cstdlib>
+#include <cstdarg>
 
 #define LOG_ERROR() logError(__func__, __FILE__, __LINE__)
 
