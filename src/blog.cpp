@@ -133,12 +133,23 @@ std::string html_escape(const std::string& s) {
     r.reserve(s.size());
     for (char c : s) {
         switch (c) {
-            case '&': r += "&amp;"; break;
-            case '<': r += "<"; break;
-            case '>': r += ">"; break;
-            case '"': r += "&quot;"; break;
-            case '\'': r += "&#39;"; break;
-            default: r += c;
+            case '&':
+                r += "&amp;";
+                break;
+            case '<':
+                r += "&lt;";
+                break;
+            case '>':
+                r += "&gt;";
+                break;
+            case '"':
+                r += "&quot;";
+                break;
+            case '\'':
+                r += "&#39;";
+                break;
+            default:
+                r += c;
         }
     }
     return r;
@@ -184,17 +195,17 @@ std::string extract_title(const std::string& content) {
 
 std::string convert_md_to_html(const std::string& markdown) {
     cmark_gfm_core_extensions_ensure_registered();
-    int options = CMARK_OPT_DEFAULT | 
-                  CMARK_OPT_UNSAFE |         // 启用 HTML 标签支持
-                  CMARK_OPT_VALIDATE_UTF8;   // UTF8 验证
-    cmark_parser *parser = cmark_parser_new(options);    
+    int options = CMARK_OPT_DEFAULT |
+                  CMARK_OPT_UNSAFE |
+                  CMARK_OPT_VALIDATE_UTF8;
+    cmark_parser *parser = cmark_parser_new(options);
     cmark_parser_attach_syntax_extension(parser, cmark_find_syntax_extension("table"));
     cmark_parser_attach_syntax_extension(parser, cmark_find_syntax_extension("strikethrough"));
     cmark_parser_attach_syntax_extension(parser, cmark_find_syntax_extension("tasklist"));
     cmark_parser_attach_syntax_extension(parser, cmark_find_syntax_extension("autolink"));
     cmark_parser_feed(parser, markdown.c_str(), markdown.length());
     cmark_node *doc = cmark_parser_finish(parser);
-    char *html = cmark_render_html(doc, options, 
+    char *html = cmark_render_html(doc, options,
                                  cmark_parser_get_syntax_extensions(parser));
     std::string result(html);
     free(html);
@@ -437,13 +448,11 @@ int main() {
 
     crow::SimpleApp app;
 
-    // 添加首页路由
     CROW_ROUTE(app, "/")
     ([]() {
         return crow::response(generate_index_page());
     });
 
-    // 添加RSS feed路由
     CROW_ROUTE(app, "/feed.xml")
     ([]() {
         crow::response res(generate_rss_feed());
