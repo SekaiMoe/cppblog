@@ -5,6 +5,10 @@
 #include "../include/crow/include/crow.h"
 #include "../include/cpptoml/include/cpptoml.h"
 
+#include <cstdlib>
+
+#define LOG_ERROR() logError(__func__, __FILE__, __LINE__)
+
 #ifdef __linux__
 
 #include <csignal>

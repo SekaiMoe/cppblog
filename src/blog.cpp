@@ -4,7 +4,6 @@
 #include <mutex>
 #include <chrono>
 #include <thread>
-#include <cstdlib>
 #include <memory>
 #include <regex>
 #include <vector>
@@ -20,8 +19,6 @@ void logError(const std::string& func, const std::string& file, int line) {
     const std::string RESET = "\033[0m";
     std::cerr << RED << "In " << func << "() in " << file << " line " << line << ":" << RESET << std::endl;
 }
-
-#define LOG_ERROR() logError(__func__, __FILE__, __LINE__)
 
 namespace fs = std::filesystem;
 
@@ -390,6 +387,16 @@ static void sighandle(int sig) {
     const char msg[] = "Fatal error: signal received. Exiting.\n";
     write(STDERR_FILENO, msg, sizeof(msg) - 1);
     _exit(127);
+}
+
+void register_signal() {
+    std::signal(SIGSEGV, sighandle);
+    std::signal(SIGABRT, sighandle);
+    std::signal(SIGFPE,  sighandle);
+    std::signal(SIGILL,  sighandle);
+
+    std::signal(SIGTERM, [](int) { should_run = false; });
+    std::signal(SIGINT,  [](int) { should_run = false; }); // Ctrl+C
 }
 
 void load_config() {
