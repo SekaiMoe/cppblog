@@ -12,6 +12,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(GNUInstallDirs)
+
 # Enable colored diagnostics if supported
 if(NOT CMAKE_GENERATOR MATCHES "Visual Studio")
     set(CMAKE_COLOR_DIAGNOSTICS ON)
@@ -53,6 +55,10 @@ if(GIT_FOUND)
         endif()
     endif()
 endif()
+
+find_package(Threads REQUIRED)
+find_package(OpenSSL REQUIRED)
+find_package(ZLIB REQUIRED)
 
 # Configure cmark-gfm
 set(CMARK_TESTS OFF CACHE BOOL "" FORCE)
