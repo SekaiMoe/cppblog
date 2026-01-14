@@ -85,6 +85,16 @@ target_compile_options(cppblog PRIVATE
     -D_REENTRANT
 )
 
+include_directories(
+    ${CMAKE_BINARY_DIR}/build/cmark/src
+    ${PROJECT_SOURCE_DIR}/include/cmark/src
+    ${PROJECT_SOURCE_DIR}/include/crow/include
+    ${PROJECT_SOURCE_DIR}/include/cmark/extensions
+    ${PROJECT_SOURCE_DIR}/include/asio/asio/include
+    ${PROJECT_SOURCE_DIR}/include/cpptoml/include
+    ${PROJECT_SOURCE_DIR}
+)
+
 target_include_directories(cppblog PRIVATE
     ${PROJECT_SOURCE_DIR}
     ${PROJECT_SOURCE_DIR}/include/cmark/src
