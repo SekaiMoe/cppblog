@@ -60,12 +60,6 @@ find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 
-target_include_directories(cppblog PRIVATE
-    ${PROJECT_SOURCE_DIR}
-    ${PROJECT_SOURCE_DIR}/include/cmark/src
-    ${PROJECT_SOURCE_DIR}/include/cmark/extensions
-)
-
 # Configure cmark-gfm
 set(CMARK_TESTS OFF CACHE BOOL "" FORCE)
 set(CMARK_SHARED OFF CACHE BOOL "" FORCE)
@@ -91,6 +85,12 @@ target_compile_options(cppblog PRIVATE
     -D_REENTRANT
 )
 
+target_include_directories(cppblog PRIVATE
+    ${PROJECT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/include/cmark/src
+    ${PROJECT_SOURCE_DIR}/include/cmark/extensions
+)
+
 # Link libraries using modern CMake (no global include_directories!)
 target_link_libraries(cppblog PRIVATE
     libcmark-gfm-extensions_static
@@ -102,7 +102,7 @@ target_link_libraries(cppblog PRIVATE
     ZLIB::ZLIB
 )
 
-# Ensure cmark extensions are built before main target (optional but safe)
+# Ensure cmark extesions are built before main target (optional but safe)
 # Note: add_dependencies is rarely needed if you link properly, but kept for clarity
 add_dependencies(cppblog libcmark-gfm-extensions_static)
 
