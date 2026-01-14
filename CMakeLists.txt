@@ -60,6 +60,12 @@ find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 
+target_include_directories(cppblog PRIVATE
+    ${PROJECT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/include/cmark/src
+    ${PROJECT_SOURCE_DIR}/include/cmark/extensions
+)
+
 # Configure cmark-gfm
 set(CMARK_TESTS OFF CACHE BOOL "" FORCE)
 set(CMARK_SHARED OFF CACHE BOOL "" FORCE)
